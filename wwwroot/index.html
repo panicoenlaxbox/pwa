@@ -52,6 +52,10 @@
     <button id="shared_web_worker_create">Create shared web worker</button>
     <button id="shared_web_worker_send_message">Send message shared web worker</button>
 
+    <h2>Nofication</h2>
+    <button onclick="notifyMe()">Notify me!</button>
+    <button onclick="notifyMeWithSimpleCode()">Notify me with simple code!</button>
+
     <div id="log"></div>
 
     <script>
@@ -213,6 +217,38 @@
         document.getElementById('shared_web_worker_send_message').addEventListener('click', e => {
             mySharedWebWorker.port.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString())
         });
+    </script>
+
+    <script>
+        function notifyMe() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notification");
+            }
+
+            // Let's check whether notification permissions have already been granted
+            else if (Notification.permission === "granted") {
+                // If it's okay let's create a notification
+                var notification = new Notification("Hi there!");
+            }
+
+            // Otherwise, we need to ask the user for permission
+            else if (Notification.permission !== 'denied') {
+                Notification.requestPermission(function (permission) {
+                    // If the user accepts, let's create a notification
+                    if (permission === "granted") {
+                        var notification = new Notification("Hi there!");
+                    }
+                });
+            }
+        }
+
+        function notifyMeWithSimpleCode() {
+            Notification.requestPermission().then(function (result) {
+                if (result === "granted") {
+                    var notification = new Notification("Hi there with simple code!");
+                }
+            });
+        }
     </script>
 
 </body>
