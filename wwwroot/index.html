@@ -42,10 +42,15 @@
         homescreen</p>
 
     <h2>Web Worker</h2>
+    <button id="web_worker_create">Create web worker</button>
     <button id="web_worker_send_message">Send message web worker</button>
     <button id="web_worker_throw_error">Throw error web worker</button>
     <button id="web_worker_terminate">Terminate web worker</button>
     <button id="web_worker_close">Close web worker from inside</button>
+
+    <h2>Shared Web Worker</h2>
+    <button id="shared_web_worker_create">Create shared web worker</button>
+    <button id="shared_web_worker_send_message">Send message shared web worker</button>
 
     <div id="log"></div>
 
@@ -149,35 +154,38 @@
     </script>
 
     <script>
-        const myWebWorker = new Worker('web-worker.js');
+        let myDedicatedWebWorker;
+
+        document.getElementById('web_worker_create').addEventListener('click', e => {
+            myDedicatedWebWorker = new Worker('dedicated-web-worker.js');
+            // Receive message from web worker
+            myDedicatedWebWorker.onmessage = function (e) {
+                console.log('Receive message from dedicated web worker: ', e.data);
+            };
+            myDedicatedWebWorker.addEventListener("error", (e) => {
+                console.log('error in web worker', e);
+            });
+        });
 
         document.getElementById('web_worker_send_message').addEventListener('click', e => {
             // Send message to web worker
-            myWebWorker.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString());
+            myDedicatedWebWorker.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString());
         });
 
-        // Receive message from web worker
-        myWebWorker.onmessage = function (e) {
-            console.log('Receive message from web worker: ', e.data);
-        }
-        
-        myWebWorker.addEventListener("error", (e) => {
-            console.log('error in web worker', e);
-        });
-        
         document.getElementById('web_worker_throw_error').addEventListener('click', e => {
-            myWebWorker.postMessage('error');
+            myDedicatedWebWorker.postMessage('error');
         });
 
         // terminate web worker
+        // Once a Worker is terminated you can't reuse or restart it
         document.getElementById('web_worker_terminate').addEventListener('click', e => {
-            myWebWorker.terminate();
+            myDedicatedWebWorker.terminate();
         });
-        
+
         // https://stackoverflow.com/questions/30500883/javascript-web-worker-close-vs-terminate
         // close web worker
         document.getElementById('web_worker_close').addEventListener('click', e => {
-            myWebWorker.postMessage('close');
+            myDedicatedWebWorker.postMessage('close');
         });
 
         //online
@@ -187,6 +195,23 @@
         });
         window.addEventListener('online', e => {
             console.log('offline');
+        });
+    </script>
+
+    <script>
+        let mySharedWebWorker;
+
+        document.getElementById('shared_web_worker_create').addEventListener('click', e => {
+            // https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker
+            mySharedWebWorker = new SharedWorker("shared-web-worker.js");
+            mySharedWebWorker.port.addEventListener("message", e => {
+                console.log('Receive message from shared web worker: ', e.data);
+            });
+            mySharedWebWorker.port.start();
+        });
+
+        document.getElementById('shared_web_worker_send_message').addEventListener('click', e => {
+            mySharedWebWorker.port.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString())
         });
     </script>
 
