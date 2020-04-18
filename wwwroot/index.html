@@ -9,12 +9,13 @@
     <script async src="https://unpkg.com/pwacompat" crossorigin="anonymous"></script>
     <title>Document</title>
     <style>
-        #iOSCallToAction {
+        #ios_call_to_action {
             font-style: italic;
             padding: 5px;
             border: 1px solid black;
             background-color: silver;
         }
+
         @media not all and (display-mode: standalone) {
 
             /* not launched as an installed PWA */
@@ -36,8 +37,15 @@
 <body>
     <h1>Index</h1>
 
-    <p id="installButton" style="display: none;"><button>Install</button></p>
-    <p id="iOSCallToAction" style="display: none;">Install this webapp on your iPhone: tap share and then Add to homescreen</p>
+    <p id="install_button" style="display: none;"><button>Install</button></p>
+    <p id="ios_call_to_action" style="display: none;">Install this webapp on your iPhone: tap share and then Add to
+        homescreen</p>
+
+    <h2>Web Worker</h2>
+    <button id="web_worker_send_message">Send message web worker</button>
+    <button id="web_worker_throw_error">Throw error web worker</button>
+    <button id="web_worker_terminate">Terminate web worker</button>
+    <button id="web_worker_close">Close web worker from inside</button>
 
     <div id="log"></div>
 
@@ -63,15 +71,15 @@
                 // Stash the event so it can be triggered later.
                 deferredPrompt = e;
                 // Update UI notify the user they can install the PWA
-                installButton.style.display = 'block';
+                install_button.style.display = 'block';
             });
         } else {
             log('onbeforeinstallprompt is not supported');
         }
 
-        var installButton = document.getElementById('installButton');
+        var install_button = document.getElementById('install_button');
 
-        installButton.addEventListener('click', async (e) => {
+        install_button.addEventListener('click', async (e) => {
             // https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
             deferredPrompt.prompt();
             let result = await deferredPrompt.userChoice;
@@ -87,7 +95,7 @@
         if ('onappinstalled' in window) {
             window.addEventListener('appinstalled', e => {
                 log('app is installed');
-                installButton.style.display = 'none';
+                install_button.style.display = 'none';
             });
         } else {
             log('onappinstalled is not supported');
@@ -104,7 +112,7 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('/service-worker.js')
                 .then((reg) => {
                     log('SW registered!');
                     // self.addEventListener('install', event => {
@@ -136,9 +144,52 @@
 
         // Checks if should display install popup notification:
         if (isIos() && !isInStandaloneMode()) {
-            document.getElementById('iOSCallToAction').style.display = 'block';
+            document.getElementById('ios_call_to_action').style.display = 'block';
         }
     </script>
+
+    <script>
+        const myWebWorker = new Worker('web-worker.js');
+
+        document.getElementById('web_worker_send_message').addEventListener('click', e => {
+            // Send message to web worker
+            myWebWorker.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString());
+        });
+
+        // Receive message from web worker
+        myWebWorker.onmessage = function (e) {
+            console.log('Receive message from web worker: ', e.data);
+        }
+        
+        myWebWorker.addEventListener("error", (e) => {
+            console.log('error in web worker', e);
+        });
+        
+        document.getElementById('web_worker_throw_error').addEventListener('click', e => {
+            myWebWorker.postMessage('error');
+        });
+
+        // terminate web worker
+        document.getElementById('web_worker_terminate').addEventListener('click', e => {
+            myWebWorker.terminate();
+        });
+        
+        // https://stackoverflow.com/questions/30500883/javascript-web-worker-close-vs-terminate
+        // close web worker
+        document.getElementById('web_worker_close').addEventListener('click', e => {
+            myWebWorker.postMessage('close');
+        });
+
+        //online
+        console.log(navigator.onLine);
+        window.addEventListener('offline', e => {
+            console.log('online');
+        });
+        window.addEventListener('online', e => {
+            console.log('offline');
+        });
+    </script>
+
 </body>
 
 </html>

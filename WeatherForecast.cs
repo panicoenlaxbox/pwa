@@ -1,6 +1,6 @@
 using System;
 
-namespace WebApp2
+namespace Pwa1
 {
     public class WeatherForecast
     {
