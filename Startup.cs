@@ -4,28 +4,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Pwa1
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
-        public IConfiguration Configuration { get; }
-
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,15 +28,26 @@ namespace Pwa1
             app.UseHttpsRedirection();
 
             app.UseDefaultFiles();
-            app.UseStaticFiles();
-
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                OnPrepareResponse = ctx =>
+                {
+                    if (ctx.Context.Request.Path.Value == "/service-worker.js")
+                    {
+                        Console.WriteLine("/service-worker.js");
+                    }
+                }
+            });
             app.UseRouting();
-
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapGet("/long-task", async context =>
+                {
+                    var delay = int.Parse(context.Request.Query["delay"]);
+                    await Task.Delay(delay);
+                    await context.Response.WriteAsync("a very long task");
+                });
             });
         }
     }

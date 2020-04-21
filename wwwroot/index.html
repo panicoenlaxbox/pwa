@@ -37,65 +37,56 @@
 <body>
     <h1>Index</h1>
 
-    <p id="install_button" style="display: none;"><button>Install</button></p>
+    <p id="install" style="display: none;"><button>Install</button></p>
     <p id="ios_call_to_action" style="display: none;">Install this webapp on your iPhone: tap share and then Add to
         homescreen</p>
 
-    <h2>Web Worker</h2>
-    <button id="web_worker_create">Create web worker</button>
-    <button id="web_worker_send_message">Send message web worker</button>
-    <button id="web_worker_throw_error">Throw error web worker</button>
-    <button id="web_worker_terminate">Terminate web worker</button>
-    <button id="web_worker_close">Close web worker from inside</button>
+    <h2>Dedicated Web Worker</h2>
+    <button id="dedicated_web_worker_create">Create</button>
+    <button id="dedicated_web_worker_post_message">Post message</button>
+    <button id="dedicated_web_worker_throw_error">Throw error</button>
+    <button id="dedicated_web_worker_terminate">Terminate</button>
+    <button id="dedicated_web_worker_close">Close</button>
 
     <h2>Shared Web Worker</h2>
-    <button id="shared_web_worker_create">Create shared web worker</button>
-    <button id="shared_web_worker_send_message">Send message shared web worker</button>
+    <button id="shared_web_worker_create">Create</button>
+    <button id="shared_web_worker_post_message">Post message</button>
 
     <h2>Nofication</h2>
-    <button onclick="notifyMe()">Notify me!</button>
-    <button onclick="notifyMeWithSimpleCode()">Notify me with simple code!</button>
-
-    <div id="log"></div>
+    <button onclick="notification()">Notification</button>
+    <button onclick="notification_more_simple()">Notification more simple</button>
 
     <script>
-
-        function log(message) {
-            console.log(message);
-            let p = document.createElement('p');
-            p.textContent = message;
-            document.getElementById('log').appendChild(p);
-        }
 
         let deferredPrompt;
 
         if ('onbeforeinstallprompt' in window) {
             // https://developer.mozilla.org/en-US/docs/Web/API/Window/onbeforeinstallprompt
             window.addEventListener('beforeinstallprompt', e => {
-                log('beforeinstallprompt has been fired');
+                console.log('beforeinstallprompt has been fired');
                 // Prevents immediate prompt display
                 e.preventDefault();
                 // https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
-                log('platforms ' + e.platforms.join(','));
+                console.log('platforms ' + e.platforms.join(','));
                 // Stash the event so it can be triggered later.
                 deferredPrompt = e;
                 // Update UI notify the user they can install the PWA
-                install_button.style.display = 'block';
+                install.style.display = 'block';
             });
         } else {
-            log('onbeforeinstallprompt is not supported');
+            console.log('onbeforeinstallprompt is not supported');
         }
 
-        var install_button = document.getElementById('install_button');
+        var install = document.getElementById('install');
 
-        install_button.addEventListener('click', async (e) => {
+        install.addEventListener('click', async (e) => {
             // https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
             deferredPrompt.prompt();
             let result = await deferredPrompt.userChoice;
             if (result.outcome === 'accepted') {
-                log('User accepted the install prompt');
+                console.log('User accepted the install prompt');
             } else {
-                log('User dismissed the install prompt');
+                console.log('User dismissed the install prompt');
             }
         });
 
@@ -103,39 +94,32 @@
         // Is dispatched once the web application is successfully installed
         if ('onappinstalled' in window) {
             window.addEventListener('appinstalled', e => {
-                log('app is installed');
-                install_button.style.display = 'none';
+                console.log('app is installed');
+                install.style.display = 'none';
             });
         } else {
-            log('onappinstalled is not supported');
+            console.log('onappinstalled is not supported');
         }
 
         window.addEventListener('load', () => {
             if (navigator.standalone) {
-                log('Launched: Installed (iOS)');
+                console.log('Launched: Installed (iOS)');
             } else if (matchMedia('(display-mode: standalone)').matches) {
-                log('Launched: Installed');
+                console.log('Launched: Installed');
             } else {
-                log('Launched: Browser Tab');
+                console.log('Launched: Browser Tab');
             }
         });
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')
                 .then((reg) => {
-                    log('SW registered!');
-                    // self.addEventListener('install', event => {
-                    // });
-                    // self.addEventListener('activate', event => {
-                    // });
-                    // self.addEventListener('fetch', function (event) {
-                    //     console.log('fetch', event.request.url);
-                    // });                
+                    console.log('SW registered in ' + reg.scope);                 
                 }).catch((error) => {
-                    log('Boo!', error);
+                    console.log('Boo!', error);
                 });
         } else {
-            log('serviceWorker is not supported');
+            console.log('serviceWorker is not supported');
         }
 
         // https://www.netguru.com/codestories/few-tips-that-will-make-your-pwa-on-ios-feel-like-native
@@ -145,11 +129,11 @@
             return /iphone|ipad|ipod/.test(userAgent);
         }
 
-        log('isIos: ' + isIos());
+        console.log('isIos: ' + isIos());
 
         // Detects if device is in standalone mode
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
-        log('isInStandaloneMode: ' + isInStandaloneMode());
+        console.log('isInStandaloneMode: ' + isInStandaloneMode());
 
         // Checks if should display install popup notification:
         if (isIos() && !isInStandaloneMode()) {
@@ -160,7 +144,7 @@
     <script>
         let myDedicatedWebWorker;
 
-        document.getElementById('web_worker_create').addEventListener('click', e => {
+        document.getElementById('dedicated_web_worker_create').addEventListener('click', e => {
             myDedicatedWebWorker = new Worker('dedicated-web-worker.js');
             // Receive message from web worker
             myDedicatedWebWorker.onmessage = function (e) {
@@ -171,29 +155,29 @@
             });
         });
 
-        document.getElementById('web_worker_send_message').addEventListener('click', e => {
+        document.getElementById('dedicated_web_worker_post_message').addEventListener('click', e => {
             // Send message to web worker
             myDedicatedWebWorker.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString());
         });
 
-        document.getElementById('web_worker_throw_error').addEventListener('click', e => {
+        document.getElementById('dedicated_web_worker_throw_error').addEventListener('click', e => {
             myDedicatedWebWorker.postMessage('error');
         });
 
         // terminate web worker
         // Once a Worker is terminated you can't reuse or restart it
-        document.getElementById('web_worker_terminate').addEventListener('click', e => {
+        document.getElementById('dedicated_web_worker_terminate').addEventListener('click', e => {
             myDedicatedWebWorker.terminate();
         });
 
         // https://stackoverflow.com/questions/30500883/javascript-web-worker-close-vs-terminate
         // close web worker
-        document.getElementById('web_worker_close').addEventListener('click', e => {
+        document.getElementById('dedicated_web_worker_close').addEventListener('click', e => {
             myDedicatedWebWorker.postMessage('close');
         });
 
         //online
-        console.log(navigator.onLine);
+        console.log('onLine', navigator.onLine);
         window.addEventListener('offline', e => {
             console.log('online');
         });
@@ -214,15 +198,15 @@
             mySharedWebWorker.port.start();
         });
 
-        document.getElementById('shared_web_worker_send_message').addEventListener('click', e => {
+        document.getElementById('shared_web_worker_post_message').addEventListener('click', e => {
             mySharedWebWorker.port.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString())
         });
     </script>
 
     <script>
-        function notifyMe() {
+        function notification() {
             if (!("Notification" in window)) {
-                alert("This browser does not support desktop notification");
+                console.log("This browser does not support desktop notification");
             }
 
             // Let's check whether notification permissions have already been granted
@@ -242,7 +226,7 @@
             }
         }
 
-        function notifyMeWithSimpleCode() {
+        function notification_more_simple() {
             Notification.requestPermission().then(function (result) {
                 if (result === "granted") {
                     var notification = new Notification("Hi there with simple code!");
