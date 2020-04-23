@@ -30,5 +30,53 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', function (e) {
-    console.log('fetch', e.request.url);
+    const url = new URL(e.request.url);
+
+    if (url.pathname.indexOf("chrome-extension") !== -1) {
+        // Uncaught (in promise) TypeError: Request scheme 'chrome-extension' is unsupported at service-worker.js:41
+        return;
+    }
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/Clients/matchAll
+    self.clients.matchAll({ type: "window" }).then((clients) => {
+        if (clients && clients.length) {
+            clients.forEach(client => {                
+                const message = "You are fetching " + url.pathname + " from " + client.url;
+                console.log(message);
+                client.postMessage(message);
+            });
+        }
+    });    
+
+    // if (url.origin == location.origin && url.pathname.endsWith('dog.jpg')) {
+    //     event.respondWith(fetch('/images/cat.png'));
+    //     return;
+    // }
+
+    e.respondWith(
+        caches.match(e.request).then((response) => {
+            return response || fetch(e.request).then(async (response) => {
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return new Response('Ups, not found', {
+                            headers: { 'Content-Type': 'text/plain' }
+                        });
+                    } else if (response.status === 500) {
+                        throw new Error(await response.text());
+                    }
+                }
+                let responseClone = response.clone();
+                caches.open(cacheName).then((cache) => {
+                    cache.put(e.request, responseClone);
+                });
+
+                return response;
+            });
+        }).catch((err) => {
+            console.log(err);
+            return new Response('Ups, error in fetch event', {
+                headers: { 'Content-Type': 'text/plain' }
+            });;
+        })
+    );
 });
