@@ -4,236 +4,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="/manifest.json">
-    <!-- https://developers.google.com/web/updates/2018/07/pwacompat -->
-    <script async src="https://unpkg.com/pwacompat" crossorigin="anonymous"></script>
     <title>Document</title>
-    <style>
-        #ios_call_to_action {
-            font-style: italic;
-            padding: 5px;
-            border: 1px solid black;
-            background-color: silver;
-        }
-
-        @media not all and (display-mode: standalone) {
-
-            /* not launched as an installed PWA */
-            body {
-                background-color: red;
-            }
-        }
-
-        @media all and (display-mode: standalone) {
-
-            /* launched as an installed PWA */
-            body {
-                background-color: yellow;
-            }
-        }
-    </style>
 </head>
 
 <body>
     <h1>Index</h1>
-
-    <p id="install" style="display: none;"><button>Install</button></p>
-    <p id="ios_call_to_action" style="display: none;">Install this webapp on your iPhone: tap share and then Add to
-        homescreen</p>
-
-    <h2>Dedicated Web Worker</h2>
-    <button id="dedicated_web_worker_create">Create</button>
-    <button id="dedicated_web_worker_post_message">Post message</button>
-    <button id="dedicated_web_worker_throw_error">Throw error</button>
-    <button id="dedicated_web_worker_terminate">Terminate</button>
-    <button id="dedicated_web_worker_close">Close</button>
-
-    <h2>Shared Web Worker</h2>
-    <button id="shared_web_worker_create">Create</button>
-    <button id="shared_web_worker_post_message">Post message</button>
-
-    <h2>Nofication</h2>
-    <button onclick="notification()">Notification</button>
-    <button onclick="notification_more_simple()">Notification more simple</button>
+    <a href="contact.html">Contact</a>
+    <button id="create">Create</button>
+    <button id="update">Update</button>
+    <button id="dog">Dog</button>
 
     <script>
 
-        let deferredPrompt;
+        let reg;
 
-        if ('onbeforeinstallprompt' in window) {
-            // https://developer.mozilla.org/en-US/docs/Web/API/Window/onbeforeinstallprompt
-            window.addEventListener('beforeinstallprompt', e => {
-                console.log('beforeinstallprompt has been fired');
-                // Prevents immediate prompt display
-                e.preventDefault();
-                // https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
-                console.log('platforms ' + e.platforms.join(','));
-                // Stash the event so it can be triggered later.
-                deferredPrompt = e;
-                // Update UI notify the user they can install the PWA
-                install.style.display = 'block';
-            });
-        } else {
-            console.log('onbeforeinstallprompt is not supported');
-        }
-
-        var install = document.getElementById('install');
-
-        install.addEventListener('click', async (e) => {
-            // https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
-            deferredPrompt.prompt();
-            let result = await deferredPrompt.userChoice;
-            if (result.outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-            } else {
-                console.log('User dismissed the install prompt');
-            }
+        // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/ready
+        // Delaying code execution until a service worker is active
+        // When controller change of service worker, this event does not fire
+        navigator.serviceWorker.ready.then(function (serviceWorkerRegistration) {
+            console.log('ready');
         });
 
-        // https://developer.mozilla.org/en-US/docs/Web/API/Window/onappinstalled
-        // Is dispatched once the web application is successfully installed
-        if ('onappinstalled' in window) {
-            window.addEventListener('appinstalled', e => {
-                console.log('app is installed');
-                install.style.display = 'none';
-            });
-        } else {
-            console.log('onappinstalled is not supported');
-        }
-
-        window.addEventListener('load', () => {
-            if (navigator.standalone) {
-                console.log('Launched: Installed (iOS)');
-            } else if (matchMedia('(display-mode: standalone)').matches) {
-                console.log('Launched: Installed');
-            } else {
-                console.log('Launched: Browser Tab');
-            }
+        // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/oncontrollerchange
+        // When the document's associated ServiceWorkerRegistration acquires a new active worker
+        //  skipWaiting()
+        navigator.serviceWorker.addEventListener('controllerchange', (e) => {
+            console.log('controllerchange');
         });
 
-        if ('serviceWorker' in navigator) {
+        document.getElementById("create").addEventListener('click', e => {
             navigator.serviceWorker.register('/service-worker.js')
-                .then((reg) => {
-                    console.log('SW registered in ' + reg.scope);                 
-                }).catch((error) => {
-                    console.log('Boo!', error);
-                });
-        } else {
-            console.log('serviceWorker is not supported');
-        }
+                .then((registration) => {
+                    reg = registration;
+                    console.log('Service worker registered in ' + reg.scope);
 
-        // https://www.netguru.com/codestories/few-tips-that-will-make-your-pwa-on-ios-feel-like-native
-        // Detects if device is on iOS 
-        const isIos = () => {
-            const userAgent = window.navigator.userAgent.toLowerCase();
-            return /iphone|ipad|ipod/.test(userAgent);
-        }
+                    console.log('register installing ', reg.installing?.state); // the installing worker, or undefined
+                    console.log('register waiting ', reg.waiting?.state); // the waiting worker, or undefined
+                    console.log('register active ', reg.active?.state); // the active worker, or undefined
 
-        console.log('isIos: ' + isIos());
+                    // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration/onupdatefound
+                    // It is fired any time the ServiceWorkerRegistration.installing property acquires a new service worker
+                    reg.addEventListener('updatefound', () => {
+                        console.log('updatefound installing ', reg.installing?.state);
+                        console.log('updatefound waiting ', reg.waiting?.state);
+                        console.log('updatefound active ', reg.active?.state);
+                    });
 
-        // Detects if device is in standalone mode
-        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
-        console.log('isInStandaloneMode: ' + isInStandaloneMode());
-
-        // Checks if should display install popup notification:
-        if (isIos() && !isInStandaloneMode()) {
-            document.getElementById('ios_call_to_action').style.display = 'block';
-        }
-    </script>
-
-    <script>
-        let myDedicatedWebWorker;
-
-        document.getElementById('dedicated_web_worker_create').addEventListener('click', e => {
-            myDedicatedWebWorker = new Worker('dedicated-web-worker.js');
-            // Receive message from web worker
-            myDedicatedWebWorker.onmessage = function (e) {
-                console.log('Receive message from dedicated web worker: ', e.data);
-            };
-            myDedicatedWebWorker.addEventListener("error", (e) => {
-                console.log('error in web worker', e);
-            });
-        });
-
-        document.getElementById('dedicated_web_worker_post_message').addEventListener('click', e => {
-            // Send message to web worker
-            myDedicatedWebWorker.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString());
-        });
-
-        document.getElementById('dedicated_web_worker_throw_error').addEventListener('click', e => {
-            myDedicatedWebWorker.postMessage('error');
-        });
-
-        // terminate web worker
-        // Once a Worker is terminated you can't reuse or restart it
-        document.getElementById('dedicated_web_worker_terminate').addEventListener('click', e => {
-            myDedicatedWebWorker.terminate();
-        });
-
-        // https://stackoverflow.com/questions/30500883/javascript-web-worker-close-vs-terminate
-        // close web worker
-        document.getElementById('dedicated_web_worker_close').addEventListener('click', e => {
-            myDedicatedWebWorker.postMessage('close');
-        });
-
-        //online
-        console.log('onLine', navigator.onLine);
-        window.addEventListener('offline', e => {
-            console.log('online');
-        });
-        window.addEventListener('online', e => {
-            console.log('offline');
-        });
-    </script>
-
-    <script>
-        let mySharedWebWorker;
-
-        document.getElementById('shared_web_worker_create').addEventListener('click', e => {
-            // https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker
-            mySharedWebWorker = new SharedWorker("shared-web-worker.js");
-            mySharedWebWorker.port.addEventListener("message", e => {
-                console.log('Receive message from shared web worker: ', e.data);
-            });
-            mySharedWebWorker.port.start();
-        });
-
-        document.getElementById('shared_web_worker_post_message').addEventListener('click', e => {
-            mySharedWebWorker.port.postMessage('Hello from index.html at ' + new Date().toLocaleTimeString())
-        });
-    </script>
-
-    <script>
-        function notification() {
-            if (!("Notification" in window)) {
-                console.log("This browser does not support desktop notification");
-            }
-
-            // Let's check whether notification permissions have already been granted
-            else if (Notification.permission === "granted") {
-                // If it's okay let's create a notification
-                var notification = new Notification("Hi there!");
-            }
-
-            // Otherwise, we need to ask the user for permission
-            else if (Notification.permission !== 'denied') {
-                Notification.requestPermission(function (permission) {
-                    // If the user accepts, let's create a notification
-                    if (permission === "granted") {
-                        var notification = new Notification("Hi there!");
+                    let serviceWorker;
+                    if (reg.installing) {
+                        serviceWorker = reg.installing;
+                    } else if (reg.waiting) {
+                        serviceWorker = reg.waiting;
+                    } else if (reg.active) {
+                        serviceWorker = reg.active;
                     }
-                });
-            }
-        }
+                    // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorker/onstatechange
+                    // Called whenever an event of type statechange is fired; it is basically fired anytime the ServiceWorker.state changes
+                    if (serviceWorker) {
+                        serviceWorker.addEventListener('statechange', () => {
+                            console.log('statechange installing ', reg.installing?.state);
+                            console.log('statechange waiting ', reg.waiting?.state);
+                            console.log('statechange active ', reg.active?.state);
+                        });
+                    }
 
-        function notification_more_simple() {
-            Notification.requestPermission().then(function (result) {
-                if (result === "granted") {
-                    var notification = new Notification("Hi there with simple code!");
-                }
-            });
-        }
+                }).catch((error) => {
+                    console.log('Error during service worker registration', error);
+                });
+        });
+
+        document.getElementById("update").addEventListener("click", e => {
+            reg.update();
+        });
+
+        document.getElementById("dog").addEventListener('click', e => {
+            const img = new Image();
+            img.src = '/images/dog.jpg';
+            document.body.appendChild(img);
+        });
+
     </script>
+
+<!-- 
+PRIMERA VEZ
+-----------
+install
+Service worker registered in https://localhost:5001/
+register installing  installing
+register waiting  undefined
+register active  undefined
+updatefound installing  installing
+updatefound waiting  undefined
+updatefound active  undefined
+activate
+statechange installing  undefined
+statechange waiting  installed
+statechange active  undefined
+statechange installing  undefined
+statechange waiting  undefined
+statechange active  activating
+ready
+statechange installing  undefined
+statechange waiting  undefined
+statechange active  activated
+
+REFRESCO PÁGINA O VOLVER A LA PÁGINA
+------------------------------------
+ready
+
+CREAR SERVICE WORKER AUNQUE YA ESTÉ INSTALADO
+---------------------------------------------
+Service worker registered in https://localhost:5001/
+register installing  undefined
+register waiting  undefined
+register active  activated
+
+VUELVO A LA PÁGINA Y HAY NUEVA VERSIÓN DE SERVICE-WORKER
+--------------------------------------------------------
+ready
+install
+***skipWaiting***
+controllerchange
+activate
+
+ESTOY EN LA PÁGINA Y HAY NUEVA VERSIÓN DE SERVICE-WORKER CON UPDATE
+-------------------------------------------------------------------
+updatefound installing  installing
+install
+updatefound waiting  undefined
+updatefound active  activated
+-->
 
 </body>
 
